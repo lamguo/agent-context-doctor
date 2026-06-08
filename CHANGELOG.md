@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-06-08
+
+### Added
+
+- Added FUNDING.yml with PayPal link for GitHub Sponsors button.
+- Enhanced README with badges wall, tagline, and command quick-table.
+
 ## [0.3.0] - 2026-06-08
 
 ### Added
