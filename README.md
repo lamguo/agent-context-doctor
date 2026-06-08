@@ -175,16 +175,15 @@ agentctx doctor --fix
 If Agent Context Doctor saves you time, consider supporting the project:
 
 <p align="center">
-  <a href="https://github.com/sponsors/lamguo">
-    <img src="https://img.shields.io/badge/GitHub_Sponsors-EA4AAA?logo=githubsponsors&logoColor=white&style=for-the-badge" alt="GitHub Sponsors">
-  </a>
-  <a href="https://www.buymeacoffee.com/lamguo">
-    <img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?logo=buymeacoffee&logoColor=black&style=for-the-badge" alt="Buy Me a Coffee">
+  <a href="https://paypal.me/lamguo">
+    <img src="https://img.shields.io/badge/PayPal-00457C?logo=paypal&logoColor=white&style=for-the-badge" alt="PayPal">
   </a>
 </p>
 
 <p align="center">
-  <sub>微信 / Alipay 打赏码请联系作者获取</sub>
+  <img src="assets/wechat-qr.jpg" width="180" alt="微信赞赏码">
+  <br>
+  <sub>微信赞赏码</sub>
 </p>
 
 ---
