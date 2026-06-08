@@ -1,0 +1,8 @@
+include CHANGELOG.md
+include AGENTS.md
+include CLAUDE.md
+include GEMINI.md
+include HANDOFF.md
+recursive-include docs *.md
+include .github/copilot-instructions.md
+include .cursor/rules/agentctx.md

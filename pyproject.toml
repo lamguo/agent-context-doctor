@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-context-doctor"
+version = "0.2.0"
+description = "Audit, generate, sync, and package repository context files for AI coding agents."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Agent Context Doctor contributors" }
+]
+keywords = [
+  "ai", "coding-agents", "agents-md", "claude-code", "gemini-cli",
+  "github-copilot", "cursor", "cli", "developer-tools"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Utilities"
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "build>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/lamguo/agent-context-doctor"
+Issues = "https://github.com/lamguo/agent-context-doctor/issues"
+
+[project.scripts]
+agentctx = "agentctx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
