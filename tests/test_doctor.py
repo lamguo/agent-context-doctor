@@ -27,3 +27,10 @@ def test_cli_doctor_json(tmp_path, capsys):
     data = json.loads(out)
     assert "planned_actions" in data
     assert code == 1
+
+
+def test_doctor_fix_reports_handoff_once_when_agents_exists(tmp_path):
+    (tmp_path / "AGENTS.md").write_text("# Existing rules\n", encoding="utf-8")
+    result = doctor_repository(tmp_path, fix=True)
+    assert "created HANDOFF.md" in result["applied_actions"]
+    assert result["applied_actions"].count("created HANDOFF.md") == 1

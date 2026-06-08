@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
+from .markers import BEGIN_RE, END_RE, GENERATED_BLOCK_RE, current_generated_block, find_agentctx_marker_conflicts
 from .templates import generated_block, tool_template
 from .utils import read_text, write_text
 
@@ -13,18 +13,6 @@ TARGET_PATHS = {
     "copilot": Path(".github/copilot-instructions.md"),
     "cursor": Path(".cursor/rules/agentctx.md"),
 }
-
-BEGIN_RE = re.compile(r"<!--\s*agentctx:begin\s*-->")
-END_RE = re.compile(r"<!--\s*agentctx:end\s*-->")
-GENERATED_BLOCK_RE = re.compile(
-    r"(?:<!--\s*agentctx:source[^\n]*-->\n)?"
-    r"(?:<!--\s*agentctx:hash\s+[a-fA-F0-9]+\s*-->\n)?"
-    r"<!--\s*agentctx:begin\s*-->\n"
-    r".*?"
-    r"<!--\s*agentctx:end\s*-->",
-    re.DOTALL,
-)
-
 
 def sync_context(
     root: Path,
@@ -63,6 +51,9 @@ def sync_context(
 
         existed = path.exists()
         current = read_text(path) if existed else ""
+        conflicts = find_agentctx_marker_conflicts(current) if existed else []
+        if conflicts:
+            raise ValueError(f"Unsafe agentctx marker conflict in {display}: {', '.join(conflicts)}")
         if dry_run:
             if existed and _is_synced(current, source, source_content):
                 already_synced.append(display)
@@ -116,11 +107,6 @@ def _replace_generated_block(current: str, replacement_block: str) -> str:
     return "\n\n".join(pieces).rstrip() + "\n"
 
 
-def _current_generated_block(current: str) -> Optional[str]:
-    match = GENERATED_BLOCK_RE.search(current)
-    return match.group(0).strip() if match else None
-
-
 def _is_synced(current: str, source_name: str, source_content: str) -> bool:
     expected = generated_block(source_name, source_content).strip()
-    return _current_generated_block(current) == expected
+    return current_generated_block(current) == expected

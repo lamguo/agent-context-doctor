@@ -81,7 +81,7 @@ def git_branch(root: Path) -> str:
     code, out = run_git(root, ["rev-parse", "--short", "HEAD"])
     if code == 0 and out:
         return f"detached@{out}"
-    return "unknown"
+    return "not a Git repository"
 
 
 def git_recent_commits(root: Path, limit: int = 5) -> List[str]:

@@ -8,6 +8,7 @@ def test_handoff_renders_without_git(tmp_path):
     data = collect_handoff_data(tmp_path)
     rendered = render_handoff(data)
     assert "Current Repository State" in rendered
+    assert "not a Git repository" in rendered
     assert "pytest" in rendered
 
 

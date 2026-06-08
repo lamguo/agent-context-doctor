@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
+from .markers import find_agentctx_marker_conflicts, current_generated_block
 from .models import Problem, ScanResult
 from .templates import generated_block
 from .utils import read_text, resolve_root
@@ -115,6 +117,7 @@ def scan_repository(root: Optional[Path] = None) -> ScanResult:
     _add_command_problems(root, commands, problems, suggestions)
     _add_path_reference_problems(root, problems)
     _add_sync_problems(root, problems, suggestions)
+    _add_marker_conflict_problems(root, problems)
 
     score = _score(files, problems, commands)
     rating = score_rating(score)
@@ -238,18 +241,29 @@ def _project_config_texts(root: Path) -> List[str]:
 
 
 def _match_commands(text: str, patterns: Sequence[Tuple[str, re.Pattern[str]]]) -> List[str]:
-    found: List[str] = []
-    covered_spans: List[Tuple[int, int]] = []
+    candidates: List[Tuple[int, int, str]] = []
     for command, pattern in patterns:
-        match = pattern.search(text)
-        if not match:
+        for match in pattern.finditer(text):
+            start, end = match.span()
+            candidates.append((start, end, command))
+
+    candidates.sort(key=lambda item: (item[0], -(item[1] - item[0]), item[2]))
+
+    found: List[str] = []
+    seen_commands: Set[str] = set()
+    covered_spans: List[Tuple[int, int]] = []
+    for start, end, command in candidates:
+        if any(_spans_overlap(start, end, existing_start, existing_end) for existing_start, existing_end in covered_spans):
             continue
-        start, end = match.span()
-        if any(existing_start <= start and end <= existing_end for existing_start, existing_end in covered_spans):
-            continue
-        found.append(command)
         covered_spans.append((start, end))
+        if command not in seen_commands:
+            found.append(command)
+            seen_commands.add(command)
     return found
+
+
+def _spans_overlap(start: int, end: int, other_start: int, other_end: int) -> bool:
+    return start < other_end and other_start < end
 
 
 def _add_command_problems(root: Path, commands: Dict[str, List[str]], problems: List[Problem], suggestions: List[str]) -> None:
@@ -297,7 +311,7 @@ def _add_path_reference_problems(root: Path, problems: List[Problem]) -> None:
             if key in seen:
                 continue
             seen.add(key)
-            target = (root / ref).resolve()
+            target = root / ref
             if not _is_inside_root(root, target):
                 continue
             if not target.exists():
@@ -312,9 +326,13 @@ def _add_path_reference_problems(root: Path, problems: List[Problem]) -> None:
 
 
 def _is_inside_root(root: Path, target: Path) -> bool:
+    # Use lexical absolute paths instead of Path.resolve(). This keeps symlinked
+    # paths inside the repository from being treated as outside merely because
+    # the symlink target points elsewhere, while still rejecting ../ escapes.
+    root_abs = os.path.abspath(root)
+    target_abs = os.path.abspath(target)
     try:
-        target.relative_to(root.resolve())
-        return True
+        return os.path.commonpath([root_abs, target_abs]) == root_abs
     except ValueError:
         return False
 
@@ -328,7 +346,11 @@ def extract_local_path_refs(markdown_text: str) -> List[str]:
         if candidate:
             refs.extend(_split_path_candidates(candidate))
     for match in re.finditer(r"(?<!`)`([^`\n]+)`(?!`)", text):
-        refs.extend(_split_path_candidates(match.group(1)))
+        inline = match.group(1).strip()
+        # Inline code often contains commands such as `pytest tests/`. Treat it
+        # as a path reference only when the entire inline span is one path-like token.
+        if not re.search(r"\s", inline):
+            refs.extend(_split_path_candidates(inline))
     return sorted(dict.fromkeys(refs))
 
 
@@ -402,16 +424,26 @@ def _marker_hash(text: str) -> Optional[str]:
 
 def _generated_block_matches(text: str, source_name: str, source_content: str) -> bool:
     expected = generated_block(source_name, source_content).strip()
-    match = re.search(
-        r"(?:<!--\s*agentctx:source[^\n]*-->\n)?"
-        r"(?:<!--\s*agentctx:hash\s+[a-fA-F0-9]+\s*-->\n)?"
-        r"<!--\s*agentctx:begin\s*-->\n"
-        r".*?"
-        r"<!--\s*agentctx:end\s*-->",
-        text,
-        flags=re.DOTALL,
-    )
-    return bool(match and match.group(0).strip() == expected)
+    block = current_generated_block(text)
+    return block == expected
+
+
+def _add_marker_conflict_problems(root: Path, problems: List[Problem]) -> None:
+    for relative in MARKDOWN_CONTEXT_PATHS:
+        path = root / relative
+        if not path.exists() or not path.is_file():
+            continue
+        conflicts = find_agentctx_marker_conflicts(read_text(path, limit=250_000))
+        if conflicts:
+            problems.append(
+                Problem(
+                    level="warning",
+                    code="agentctx_marker_conflict",
+                    file=relative.as_posix(),
+                    message="Found ambiguous or malformed agentctx markers.",
+                    suggestion="Remove or repair conflicting agentctx markers before running sync.",
+                )
+            )
 
 
 def _score(files: Dict[str, bool], problems: List[Problem], commands: Dict[str, List[str]]) -> int:
@@ -433,6 +465,8 @@ def _score(files: Dict[str, bool], problems: List[Problem], commands: Dict[str, 
         elif problem.code == "out_of_sync":
             score -= 5
         elif problem.code == "test_command_conflict":
+            score -= 5
+        elif problem.code == "agentctx_marker_conflict":
             score -= 5
     return max(0, min(100, score))
 

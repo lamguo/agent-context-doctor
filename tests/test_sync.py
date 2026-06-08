@@ -1,3 +1,5 @@
+import pytest
+
 from agentctx.cli import main
 from agentctx.syncer import sync_context
 
@@ -75,3 +77,10 @@ def test_sync_creates_cursor_target(tmp_path):
     text = (tmp_path / ".cursor" / "rules" / "agentctx.md").read_text(encoding="utf-8")
     assert "# Rules" in text
     assert "agentctx:hash" in text
+
+
+def test_sync_refuses_ambiguous_agentctx_marker(tmp_path):
+    (tmp_path / "AGENTS.md").write_text("# Rules\n", encoding="utf-8")
+    (tmp_path / "CLAUDE.md").write_text("<!-- agentctx:custom something -->\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="marker conflict"):
+        sync_context(tmp_path, targets=["claude"])

@@ -81,7 +81,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print(format_scan_text(result))
     if args.fail_under is not None and result.score < args.fail_under:
         return 1
-    return 1 if any(problem.level == "error" for problem in result.problems) else 0
+    return 0
 
 
 def cmd_init(args: argparse.Namespace) -> int:

@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Dict, List
 
 from .handoff import write_handoff
-from .initializer import init_context_files
 from .scanner import scan_repository
 from .syncer import TARGET_PATHS, sync_context
+from .templates import DEFAULT_AGENTS
+from .utils import write_text
 
 
 def doctor_repository(root: Path, fix: bool = False) -> Dict[str, object]:
@@ -26,17 +27,14 @@ def doctor_repository(root: Path, fix: bool = False) -> Dict[str, object]:
 
     if fix:
         if not before.files.get("AGENTS.md", False):
-            result = init_context_files(root, include_all=False, force=False)
-            applied.extend(f"created {path}" for path in result["created"] if path == "AGENTS.md")
+            write_text(root / "AGENTS.md", DEFAULT_AGENTS)
+            applied.append("created AGENTS.md")
 
-        handoff_missing = not before.files.get("HANDOFF.md", False)
-        agents_exists = (root / "AGENTS.md").exists()
-
-        if handoff_missing:
+        if not before.files.get("HANDOFF.md", False):
             write_handoff(root)
             applied.append("created HANDOFF.md")
 
-        if agents_exists:
+        if (root / "AGENTS.md").exists():
             sync_result = sync_context(root)
             applied.extend(f"created {path}" for path in sync_result["created"])
             applied.extend(f"updated {path}" for path in sync_result["updated"])

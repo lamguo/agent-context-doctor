@@ -30,11 +30,11 @@ def test_scan_detects_missing_path_reference(tmp_path):
     assert any(problem.code == "missing_path_reference" for problem in result.problems)
 
 
-def test_extract_local_path_refs_ignores_urls_and_commands():
+def test_extract_local_path_refs_ignores_urls_and_inline_commands():
     text = "See [site](https://example.com), [local](docs/usage.md), and run `pytest tests/`."
     refs = extract_local_path_refs(text)
     assert "docs/usage.md" in refs
-    assert "tests" in refs
+    assert "tests" not in refs
     assert "https://example.com" not in refs
     assert "pytest" not in refs
 
@@ -45,7 +45,7 @@ def test_cli_scan_json(tmp_path, capsys):
     data = json.loads(out)
     assert data["repository"] == tmp_path.name
     assert "score" in data
-    assert code == 1
+    assert code == 0
 
 
 def test_extract_local_path_refs_handles_fenced_code_and_inline_paths():
@@ -86,3 +86,33 @@ def test_cli_scan_fail_under_returns_nonzero(tmp_path):
     (tmp_path / "README.md").write_text("# Demo\n", encoding="utf-8")
     code = main(["scan", "--root", str(tmp_path), "--fail-under", "90"])
     assert code == 1
+
+
+def test_command_detection_keeps_separate_non_nested_occurrences(tmp_path):
+    (tmp_path / "README.md").write_text(
+        "Primary test: `python -m pytest`. Legacy check: `pytest`.",
+        encoding="utf-8",
+    )
+    result = scan_repository(tmp_path)
+    assert result.commands["test"] == ["python -m pytest", "pytest"]
+
+
+def test_scan_detects_agentctx_marker_conflict(tmp_path):
+    (tmp_path / "README.md").write_text("# Demo\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# AGENTS.md\n", encoding="utf-8")
+    (tmp_path / "CLAUDE.md").write_text("<!-- agentctx:custom something -->\n", encoding="utf-8")
+    result = scan_repository(tmp_path)
+    assert any(problem.code == "agentctx_marker_conflict" for problem in result.problems)
+
+
+def test_missing_path_reference_inside_symlink_is_still_checked(tmp_path):
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    try:
+        (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        return
+    (tmp_path / "README.md").write_text("See `linked/missing.md`. Run `pytest`.\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# AGENTS.md\n", encoding="utf-8")
+    result = scan_repository(tmp_path)
+    assert any(problem.code == "missing_path_reference" and "linked/missing.md" in problem.message for problem in result.problems)

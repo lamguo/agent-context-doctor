@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-06-08
+
+### Fixed
+
+- Made `agentctx scan` return zero by default so normal audits do not look like command failures; CI failure remains available through `--fail-under`.
+- Improved local path checks for symlinked paths by using lexical root containment instead of resolving symlink targets.
+- Reduced false positives from inline code by treating inline code as a path reference only when the whole span is one path-like token.
+- Added detection for ambiguous or malformed `agentctx:` HTML markers before sync rewrites generated blocks.
+- Improved command matching to handle multiple occurrences while still avoiding nested duplicates such as `pytest` inside `python -m pytest`.
+- Shared generated-block marker parsing between scanner and syncer.
+- Made `doctor --fix` create only the missing file it reports instead of relying on broad init result filtering.
+- Rendered non-Git handoffs as `not a Git repository` instead of `unknown`.
+- Replaced the placeholder package author with the project owner name.
+
 ## [0.2.0] - 2026-06-08
 
 ### Added
