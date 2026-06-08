@@ -9,7 +9,7 @@ from . import __version__
 from .doctor import doctor_repository
 from .handoff import collect_handoff_data, write_handoff
 from .initializer import init_context_files
-from .packer import create_context_pack
+from .packer import create_context_pack, render_context_pack
 from .scanner import format_scan_text, scan_repository
 from .syncer import TARGET_PATHS, sync_context
 from .utils import resolve_root
@@ -61,7 +61,23 @@ def build_parser() -> argparse.ArgumentParser:
     pack_parser = subparsers.add_parser("pack", help="Generate PROJECT_CONTEXT.md for an AI coding session.")
     pack_parser.add_argument("--root", default=None, help="Repository root. Defaults to current directory.")
     pack_parser.add_argument("--output", default="PROJECT_CONTEXT.md", help="Output file. Defaults to PROJECT_CONTEXT.md.")
+    pack_parser.add_argument("--stdout", action="store_true", help="Print the context pack to stdout instead of writing a file.")
     pack_parser.set_defaults(func=cmd_pack)
+
+    verify_parser = subparsers.add_parser("verify", help="CI-friendly verification for repository AI context health.")
+    verify_parser.add_argument("--root", default=None, help="Repository root to verify. Defaults to current directory.")
+    verify_parser.add_argument("--min-score", type=int, default=80, metavar="SCORE", help="Minimum acceptable context score. Defaults to 80.")
+    verify_parser.add_argument("--strict", action="store_true", help="Fail on warnings as well as errors and score failures.")
+    verify_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    verify_parser.set_defaults(func=cmd_verify)
+
+    badge_parser = subparsers.add_parser("badge", help="Print a Markdown badge for the current context score.")
+    badge_parser.add_argument("--root", default=None, help="Repository root to score. Defaults to current directory.")
+    badge_parser.add_argument("--label", default="agentctx", help="Badge label. Defaults to agentctx.")
+    badge_parser.add_argument("--style", default=None, help="Optional shields.io style, for example flat-square.")
+    badge_parser.add_argument("--url-only", action="store_true", help="Print only the badge image URL.")
+    badge_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+    badge_parser.set_defaults(func=cmd_badge)
 
     doctor_parser = subparsers.add_parser("doctor", help="Plan or apply safe automatic context repairs.")
     doctor_parser.add_argument("--root", default=None, help="Repository root. Defaults to current directory.")
@@ -143,9 +159,76 @@ def cmd_handoff(args: argparse.Namespace) -> int:
 
 def cmd_pack(args: argparse.Namespace) -> int:
     root = resolve_root(args.root)
+    if args.stdout:
+        print(render_context_pack(root), end="")
+        return 0
     path = create_context_pack(root, output=args.output)
     print(f"Wrote {path.name}.")
     return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    root = resolve_root(args.root)
+    result = scan_repository(root)
+    error_count = sum(1 for problem in result.problems if problem.level == "error")
+    warning_count = sum(1 for problem in result.problems if problem.level == "warning")
+    passed = result.score >= args.min_score and error_count == 0 and (not args.strict or warning_count == 0)
+    payload = {
+        "passed": passed,
+        "min_score": args.min_score,
+        "strict": args.strict,
+        "score": result.score,
+        "rating": result.rating,
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "result": result.to_dict(),
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        status = "passed" if passed else "failed"
+        print(f"Verification {status}: score {result.score}/100 ({result.rating}), min {args.min_score}.")
+        if error_count:
+            print(f"Errors: {error_count}")
+        if args.strict and warning_count:
+            print(f"Warnings: {warning_count}")
+        if not passed:
+            print("Run `agentctx scan` for the full report.")
+    return 0 if passed else 1
+
+
+def cmd_badge(args: argparse.Namespace) -> int:
+    root = resolve_root(args.root)
+    result = scan_repository(root)
+    color = _badge_color(result.score)
+    label = _quote_badge_part(args.label)
+    message = _quote_badge_part(f"{result.score}/100")
+    url = f"https://img.shields.io/badge/{label}-{message}-{color}"
+    if args.style:
+        url = f"{url}?style={args.style}"
+    markdown = f"![{args.label}: {result.score}/100]({url})"
+    payload = {"score": result.score, "rating": result.rating, "color": color, "url": url, "markdown": markdown}
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    elif args.url_only:
+        print(url)
+    else:
+        print(markdown)
+    return 0
+
+
+def _badge_color(score: int) -> str:
+    if score >= 90:
+        return "brightgreen"
+    if score >= 75:
+        return "green"
+    if score >= 60:
+        return "yellow"
+    return "red"
+
+
+def _quote_badge_part(value: str) -> str:
+    return value.replace("-", "--").replace("_", "__").replace(" ", "_").replace("/", "%2F")
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:

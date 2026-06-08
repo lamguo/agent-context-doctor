@@ -1,0 +1,10 @@
+ai
+coding-agents
+agents-md
+claude-code
+gemini-cli
+github-copilot
+cursor
+developer-tools
+cli
+python

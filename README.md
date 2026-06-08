@@ -1,32 +1,100 @@
-<div align="center">
+# Agent Context Doctor
 
-# 🩺 Agent Context Doctor
+[![CI](https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml)
+![agentctx: 100/100](https://img.shields.io/badge/agentctx-100%2F100-brightgreen)
 
-**One CLI to rule all your AI agent context files.**
+Audit, generate, sync, verify, and package repository context files for AI coding agents.
 
-Audit · Generate · Sync · Repair · Pack
+`agentctx` helps you keep project instructions accurate across tools such as Codex, Claude Code, Gemini CLI, Cursor, and GitHub Copilot. It works locally, uses no LLM API, and has zero runtime dependencies.
 
-[![PyPI Version](https://img.shields.io/pypi/v/agent-context-doctor?color=blue&logo=pypi&logoColor=white)](https://pypi.org/project/agent-context-doctor/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/agent-context-doctor?logo=python&logoColor=white)](https://pypi.org/project/agent-context-doctor/)
-[![License](https://img.shields.io/pypi/l/agent-context-doctor?color=green)](https://github.com/lamguo/agent-context-doctor/blob/master/LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/lamguo/agent-context-doctor?style=social)](https://github.com/lamguo/agent-context-doctor)
-[![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen)](https://github.com/lamguo/agent-context-doctor)
-[![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://pypi.org/project/agent-context-doctor/)
+![agentctx demo](docs/demo.gif)
 
-**Zero dependencies · Works offline · No API key needed**
+## Why?
 
-</div>
+AI coding agents work better when your repository has clear, current, and tool-readable instructions. Many projects now carry several context files:
 
----
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- `.github/copilot-instructions.md`
+- `.cursor/rules/`
+- `HANDOFF.md`
 
-## 📖 What is this?
+Keeping those files synchronized by hand is easy to forget. Agent Context Doctor scans your repository, reports missing or stale context, generates starter files, safely syncs generated sections, verifies context health in CI, and creates handoff/context packs for the next AI coding session.
 
-Your repo has `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/`, `HANDOFF.md`...
+## Features
 
-Keeping them in sync by hand is tedious and error-prone. **Agent Context Doctor** audits, generates, syncs, repairs, and packages all your AI coding agent context files — with one command, no dependencies, and zero network calls.
+- **Scan repository context** with a readable score and machine-readable JSON.
+- **Verify in CI** with a clear pass/fail command separate from human reports.
+- **Generate starter files** for AGENTS.md, Claude, Gemini, Copilot, Cursor, and handoff notes.
+- **Safely sync generated sections** without deleting user-written content outside markers, including Cursor rules.
+- **Create handoff summaries** from local Git state.
+- **Package AI-ready context** into `PROJECT_CONTEXT.md` or print it with `--stdout`.
+- **Generate score badges** for README files.
+- **Run safe repairs** with `agentctx doctor --fix`.
+- **Zero runtime dependencies**; Python standard library only.
+
+## Installation
+
+From PyPI, once published:
+
+```bash
+pip install agent-context-doctor
+```
+
+From source:
+
+```bash
+git clone https://github.com/lamguo/agent-context-doctor.git
+cd agent-context-doctor
+python -m pip install -e .
+```
+
+## Quick start
+
+```bash
+# Audit the current repository for humans
+agentctx scan
+
+# JSON output for scripts
+agentctx scan --json
+
+# CI-friendly verification
+agentctx verify --min-score 90
+agentctx verify --strict
+
+# Generate AGENTS.md and HANDOFF.md if missing
+agentctx init
+
+# Generate all supported context files
+agentctx init --all
+
+# Sync AGENTS.md into Claude, Gemini, Copilot, and Cursor instruction files
+agentctx sync --from AGENTS.md
+
+# Check whether generated files are in sync
+agentctx sync --check
+
+# Generate a handoff file from local Git state
+agentctx handoff
+
+# Generate PROJECT_CONTEXT.md for a new AI coding session
+agentctx pack
+
+# Print the context pack instead of writing it
+agentctx pack --stdout
+
+# Generate a README badge
+agentctx badge
+
+# Plan/apply safe context repairs
+agentctx doctor
+agentctx doctor --fix
+```
+
+## Example scan output
 
 ```text
-$ agentctx scan
 Agent Context Doctor
 
 Repository: my-project
@@ -42,7 +110,7 @@ Missing:
   ⚠️ GEMINI.md
 
 Problems:
-  ⚠️ Missing HANDOFF.md. Long AI coding sessions are easier to resume.
+  ⚠️ Missing HANDOFF.md. Long AI coding sessions are easier to resume with a handoff file.
   ⚠️ Missing GEMINI.md.
 
 Suggestions:
@@ -50,125 +118,160 @@ Suggestions:
   - Run: agentctx handoff
 ```
 
-```text
-$ agentctx doctor --fix
-Score: 52/100 -> 100/100
-Applied:
-  - created AGENTS.md
-  - created HANDOFF.md
-  - created CLAUDE.md
-  - created GEMINI.md
-  - created .github/copilot-instructions.md
-  - created .cursor/rules/agentctx.md
-```
+## Commands
 
----
+### `agentctx scan`
 
-## ✨ Why Agent Context Doctor?
-
-### 🎯 The problem
-
-AI coding agents (Claude Code, Gemini CLI, GitHub Copilot, Cursor, Codex) each expect their own context file format. A modern project can easily accumulate **6+ agent context files**. When you update your instructions in `AGENTS.md`, you have to manually replicate that change everywhere — or risk agents working with stale instructions.
-
-### 💡 The solution
-
-`agentctx` treats `AGENTS.md` as your **single source of truth** and safely propagates changes to all other tool-specific files via guarded markers (`<!-- agentctx:begin -->` ... `<!-- agentctx:end -->`). Your custom content outside the markers is preserved.
-
----
-
-## 🚀 Quick start
+Checks common AI context files, project files, referenced local paths, common project commands, command/config mismatches, AGENTS.md quality sections, and sync markers. It is meant for human-readable reporting and returns zero by default unless `--fail-under` is used.
 
 ```bash
-# Install (no dependencies)
-pip install agent-context-doctor
-
-# Audit your project's AI context health
 agentctx scan
-
-# Generate missing context files (AGENTS.md, HANDOFF.md)
-agentctx init
-
-# Generate ALL tool-specific files
-agentctx init --all
-
-# Sync AGENTS.md → CLAUDE.md, GEMINI.md, Copilot, Cursor
-agentctx sync --from AGENTS.md
-
-# Generate a handoff summary for the next AI coding session
-agentctx handoff
-
-# Package everything into PROJECT_CONTEXT.md for a new agent
-agentctx pack
-
-# Auto-fix everything at once (safe — never deletes user content)
-agentctx doctor --fix
+agentctx scan --json
+agentctx scan --fail-under 80
+agentctx scan --root /path/to/repo
 ```
 
----
+### `agentctx verify`
 
-## 🧰 Features at a glance
+Runs a CI-friendly verification gate. Unlike `scan`, this command is intentionally pass/fail.
 
-| Feature | Command | What it does |
-|---|---|---|
-| 🔍 **Scan** | `agentctx scan` | Scores your repo's AI context health (0–100) |
-| 📋 **Init** | `agentctx init --all` | Creates starter AGENTS.md, CLAUDE.md, GEMINI.md, Copilot, Cursor, HANDOFF |
-| 🔄 **Sync** | `agentctx sync` | Propagates AGENTS.md changes safely across all tool files |
-| 🩺 **Doctor** | `agentctx doctor --fix` | Auto-repairs missing/outdated context in one shot |
-| 📝 **Handoff** | `agentctx handoff` | Generates session handoff from local Git state |
-| 📦 **Pack** | `agentctx pack` | Bundles everything into `PROJECT_CONTEXT.md` |
-| ✅ **CI gate** | `agentctx scan --fail-under 80` | Fail CI builds with poor context scores |
-| 🔎 **JSON mode** | `agentctx scan --json` | Machine-readable output for scripting |
+```bash
+agentctx verify
+agentctx verify --min-score 90
+agentctx verify --strict
+agentctx verify --json
+```
 
-### Safe by design
+### `agentctx init`
 
-- `agentctx sync` only replaces content inside `<!-- agentctx:begin -->` `<!-- agentctx:end -->` markers
-- Content before or after markers is **never touched**
-- `agentctx doctor --fix` never deletes files — only creates missing ones
-- Works **fully offline** — scans filesystem, runs `git`, no network
-- **Zero runtime dependencies** — Python standard library only
+Creates starter templates. Existing files are skipped by default.
 
----
+```bash
+agentctx init
+agentctx init --all
+agentctx init --dry-run
+agentctx init --force
+```
 
-## 📊 How it compares
+### `agentctx sync`
 
-| Feature | agentctx | source-agents | ai-rules-sync | ctxlint |
-|---|---|---|---|---|
-| Scan / health score | ✅ | ❌ | ❌ | ✅ |
-| Generate starter files | ✅ | ❌ | ✅ | ❌ |
-| Sync with marker safety | ✅ | ✅ | ✅ | ❌ |
-| Session handoff | ✅ | ❌ | ❌ | ❌ |
-| Context pack (PROJECT_CONTEXT.md) | ✅ | ❌ | ❌ | ❌ |
-| Doctor auto-fix | ✅ | ❌ | ❌ | ❌ |
-| CI quality gate (`--fail-under`) | ✅ | ❌ | ❌ | ✅ |
-| Cursor rules support | ✅ | ❌ | ❌ | ❌ |
-| Zero dependencies | ✅ | ❌ | ✅ | ❌ |
-| Python (pip install) | ✅ | ❌ | ❌ | ❌ |
+Copies `AGENTS.md` into generated sections in tool-specific files. It only replaces content between `agentctx` markers.
 
----
+```bash
+agentctx sync --from AGENTS.md
+agentctx sync --to claude --to gemini
+agentctx sync --to cursor
+agentctx sync --dry-run
+agentctx sync --check
+```
 
-## 🛠️ CI / GitHub Actions
+### `agentctx handoff`
+
+Creates a handoff file using local Git metadata.
+
+```bash
+agentctx handoff
+agentctx handoff --json
+agentctx handoff --output HANDOFF.md
+```
+
+### `agentctx pack`
+
+Creates an AI-ready context package.
+
+```bash
+agentctx pack
+agentctx pack --output PROJECT_CONTEXT.md
+agentctx pack --stdout
+```
+
+### `agentctx badge`
+
+Prints a dynamic Markdown badge based on the current context score.
+
+```bash
+agentctx badge
+agentctx badge --style flat-square
+agentctx badge --url-only
+agentctx badge --json
+```
+
+### `agentctx doctor`
+
+Plans or applies safe automatic repairs. Safe repairs can create missing starter files, generate `HANDOFF.md`, and create or refresh generated tool files from `AGENTS.md`. It does not delete files or overwrite user-authored content outside `agentctx` markers.
+
+```bash
+agentctx doctor
+agentctx doctor --fix
+agentctx doctor --json
+```
+
+## Generated file safety
+
+`agentctx sync` uses markers like this:
+
+```md
+<!-- agentctx:source AGENTS.md -->
+<!-- agentctx:hash abc123 -->
+<!-- agentctx:begin -->
+Generated content here.
+<!-- agentctx:end -->
+```
+
+On later syncs, only the generated block is replaced. Content before or after the markers is preserved.
+
+## CI usage
 
 ```yaml
-- name: Check agent context quality
-  run: |
-    pip install agent-context-doctor
-    agentctx scan --fail-under 80
+name: CI
 
-- name: Ensure generated files are in sync
-  run: agentctx sync --check
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - run: agentctx verify --min-score 90
+      - run: agentctx sync --check
 ```
 
----
+## GitHub setup
 
-## 🌱 Roadmap
+After creating the GitHub repository, set the default branch and Topics in the GitHub UI. See [`docs/github-setup.md`](docs/github-setup.md).
 
-- [ ] Context score badge generator
-- [ ] GitHub Action wrapper
-- [ ] Markdown table output
-- [ ] `agentctx pack --stdout`
-- [ ] More stale-path detection rules
+Recommended Topics:
 
----
+```text
+ai, coding-agents, agents-md, claude-code, gemini-cli, github-copilot, cursor, developer-tools, cli, python
+```
+
+## Development
+
+```bash
+python -m pip install -e .[dev]
+pytest
+agentctx scan
+agentctx verify --min-score 90
+```
+
+## Roadmap
+
+- More stale-path and command validation rules.
+- Markdown table output option.
+- Optional GitHub Action wrapper.
+- Config file support for custom scoring thresholds.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## 💖 Support
 
@@ -186,10 +289,6 @@ If Agent Context Doctor saves you time, consider supporting the project:
   <sub>微信赞赏码</sub>
 </p>
 
----
+## License
 
-## 📄 License
-
-MIT &mdash; see [LICENSE](LICENSE).
-
-*Built with ❤️ for the AI coding agent ecosystem.*
+MIT

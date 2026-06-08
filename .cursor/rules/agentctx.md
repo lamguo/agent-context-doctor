@@ -10,7 +10,7 @@ Use the repository instructions in `AGENTS.md` as the source of truth.
 - Do not commit secrets or generated private files.
 
 <!-- agentctx:source AGENTS.md -->
-<!-- agentctx:hash dd115a2f0876 -->
+<!-- agentctx:hash 0b090331881e -->
 <!-- agentctx:begin -->
 # AGENTS.md
 
@@ -29,8 +29,10 @@ python -m pip install -e .[dev]
 ```bash
 pytest
 agentctx scan
-agentctx scan --json
-agentctx scan --fail-under 80
+agentctx verify --min-score 90
+agentctx sync --check
+agentctx pack --stdout
+agentctx badge
 agentctx doctor
 ```
 
@@ -47,6 +49,7 @@ agentctx doctor
 - Prefer small, focused functions over large command handlers.
 - Keep CLI output stable and readable.
 - Keep JSON output stable and script-friendly.
+- Keep `scan` human-oriented and `verify` CI-oriented.
 - Keep `agentctx doctor --fix` safe: no deletion and no overwriting user-authored content outside markers.
 - Avoid network calls in runtime code.
 
@@ -61,7 +64,8 @@ pytest
 Also run a CLI smoke test:
 
 ```bash
-agentctx scan --json
+agentctx verify --min-score 90
+agentctx sync --check
 ```
 
 ## Security Notes

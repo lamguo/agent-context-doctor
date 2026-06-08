@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-06-08
+
+### Added
+
+- Added `agentctx verify` as a CI-friendly pass/fail command separate from human-oriented `agentctx scan`.
+- Added `agentctx pack --stdout` for piping context directly into other tools without writing `PROJECT_CONTEXT.md`.
+- Added `agentctx badge` for generating score badges for README files.
+- Added command validation rules for documented Makefile, npm, and Python packaging commands.
+- Added AGENTS.md quality checks for setup, testing, and security guidance.
+- Added `CONTRIBUTING.md`, GitHub setup docs, recommended repository topics, and a demo GIF.
+
+### Changed
+
+- Updated CI to run on all pushes, all pull requests, and manual `workflow_dispatch` instead of only branches named `main`.
+- Added CI and context-score badges to README.
+
 ## [0.2.1] - 2026-06-08
 
 ### Fixed

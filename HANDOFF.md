@@ -3,7 +3,7 @@
 ## Current Repository State
 
 - Repository: `agent-context-doctor`
-- Branch: `unknown`
+- Branch: `not a Git repository`
 
 ## Recent Commits
 
@@ -19,17 +19,22 @@
 
 ## Detected Project Commands
 
-- Install: pip install, python -m pip install
-- Test: pytest
-- Build: not detected
+- Install: `python -m pip install -e .[dev]`
+- Test: `pytest`
+- Verify: `agentctx verify --min-score 90`
+- Sync check: `agentctx sync --check`
+- Build: `python -m build`
 
 ## Next Recommended Steps
 
-- Run the documented test command: pytest
-- Run `agentctx scan` and fix high-severity context issues first.
+- Push the repository to GitHub on the `main` branch.
+- Add the recommended GitHub Topics from `docs/github-setup.md`.
+- Confirm the CI badge becomes active after the first workflow run.
+- Run `pytest`, `agentctx verify --min-score 90`, and `agentctx sync --check` before release.
 
 ## Notes For The Next Agent
 
-- Read `AGENTS.md` first if it exists.
-- Avoid repeating completed work unless the handoff says it needs verification.
+- Read `AGENTS.md` first.
 - Keep changes small and verify with the documented test command.
+- Keep `scan` human-oriented and `verify` CI-oriented.
+- Do not overwrite user-authored content outside `agentctx` markers.

@@ -1,8 +1,13 @@
 include CHANGELOG.md
+include CONTRIBUTING.md
 include AGENTS.md
 include CLAUDE.md
 include GEMINI.md
 include HANDOFF.md
-recursive-include docs *.md
+include .gitignore
 include .github/copilot-instructions.md
+include .github/repository-topics.txt
+recursive-include .github/workflows *.yml
 include .cursor/rules/agentctx.md
+recursive-include docs *.md *.gif
+recursive-include assets *.jpg

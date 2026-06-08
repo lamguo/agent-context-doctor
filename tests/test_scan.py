@@ -116,3 +116,21 @@ def test_missing_path_reference_inside_symlink_is_still_checked(tmp_path):
     (tmp_path / "AGENTS.md").write_text("# AGENTS.md\n", encoding="utf-8")
     result = scan_repository(tmp_path)
     assert any(problem.code == "missing_path_reference" and "linked/missing.md" in problem.message for problem in result.problems)
+
+
+def test_scan_detects_invalid_make_target(tmp_path):
+    (tmp_path / "README.md").write_text("# Demo\n\nRun `make test`.\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# AGENTS.md\n\nSetup and security notes. Run `make test`.\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text("build:\n\techo build\n", encoding="utf-8")
+    result = scan_repository(tmp_path)
+    assert any(problem.code == "invalid_make_target" for problem in result.problems)
+
+
+def test_scan_detects_missing_agents_quality_sections(tmp_path):
+    (tmp_path / "README.md").write_text("# Demo\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("# AGENTS.md\n\nProject notes only.\n", encoding="utf-8")
+    result = scan_repository(tmp_path)
+    codes = {problem.code for problem in result.problems}
+    assert "missing_agents_setup_section" in codes
+    assert "missing_agents_testing_section" in codes
+    assert "missing_agents_security_section" in codes

@@ -115,6 +115,8 @@ def scan_repository(root: Optional[Path] = None) -> ScanResult:
     _add_missing_context_problems(files, problems, suggestions)
     commands = detect_commands(root)
     _add_command_problems(root, commands, problems, suggestions)
+    _add_command_validation_problems(root, commands, problems, suggestions)
+    _add_agent_file_quality_problems(root, problems, suggestions)
     _add_path_reference_problems(root, problems)
     _add_sync_problems(root, problems, suggestions)
     _add_marker_conflict_problems(root, problems)
@@ -299,6 +301,115 @@ def _add_command_problems(root: Path, commands: Dict[str, List[str]], problems: 
             suggestions.append("Run: agentctx sync --from AGENTS.md")
 
 
+def _add_command_validation_problems(root: Path, commands: Dict[str, List[str]], problems: List[Problem], suggestions: List[str]) -> None:
+    makefile = root / "Makefile"
+    makefile_text = read_text(makefile, limit=200_000) if makefile.exists() and makefile.is_file() else ""
+    for command, target in [("make test", "test"), ("make build", "build")]:
+        if command in commands.get(target, []) and makefile.exists() and not _make_target_exists(makefile_text, target):
+            problems.append(
+                Problem(
+                    level="warning",
+                    code="invalid_make_target",
+                    file="Makefile",
+                    message=f"Documented command `{command}` was found, but Makefile has no `{target}` target.",
+                    suggestion=f"Add a `{target}` target or update AGENTS.md with the real command.",
+                )
+            )
+            suggestions.append("Update AGENTS.md with commands that actually exist")
+
+    package_scripts = _package_json_scripts(root)
+    if "npm test" in commands.get("test", []) and package_scripts is not None and "test" not in package_scripts:
+        problems.append(
+            Problem(
+                level="warning",
+                code="invalid_npm_script",
+                file="package.json",
+                message="Documented command `npm test` was found, but package.json has no `test` script.",
+                suggestion="Add a package.json test script or document the real test command.",
+            )
+        )
+    if "npm run build" in commands.get("build", []) and package_scripts is not None and "build" not in package_scripts:
+        problems.append(
+            Problem(
+                level="warning",
+                code="invalid_npm_script",
+                file="package.json",
+                message="Documented command `npm run build` was found, but package.json has no `build` script.",
+                suggestion="Add a package.json build script or document the real build command.",
+            )
+        )
+
+    has_python_project_file = any((root / name).exists() for name in ["pyproject.toml", "setup.py", "setup.cfg"])
+    if any(command in commands.get("install", []) for command in ["pip install", "python -m pip install"]) and not has_python_project_file:
+        problems.append(
+            Problem(
+                level="warning",
+                code="missing_python_project_file",
+                message="A pip install command was documented, but no pyproject.toml, setup.py, or setup.cfg was found.",
+                suggestion="Add Python packaging metadata or update the documented install command.",
+            )
+        )
+    if "python -m build" in commands.get("build", []) and not has_python_project_file:
+        problems.append(
+            Problem(
+                level="warning",
+                code="missing_python_project_file",
+                message="`python -m build` was documented, but no pyproject.toml, setup.py, or setup.cfg was found.",
+                suggestion="Add Python packaging metadata or update the documented build command.",
+            )
+        )
+
+
+def _make_target_exists(makefile_text: str, target: str) -> bool:
+    return bool(re.search(rf"(?m)^{re.escape(target)}\s*:", makefile_text))
+
+
+def _package_json_scripts(root: Path) -> Optional[Dict[str, str]]:
+    package_json = root / "package.json"
+    if not package_json.exists() or not package_json.is_file():
+        return None
+    try:
+        data = json.loads(read_text(package_json, limit=200_000))
+    except json.JSONDecodeError:
+        return {}
+    scripts = data.get("scripts", {}) if isinstance(data, dict) else {}
+    if not isinstance(scripts, dict):
+        return {}
+    return {str(key): str(value) for key, value in scripts.items()}
+
+
+def _add_agent_file_quality_problems(root: Path, problems: List[Problem], suggestions: List[str]) -> None:
+    agents = root / "AGENTS.md"
+    if not agents.exists() or not agents.is_file():
+        return
+    text = read_text(agents, limit=250_000)
+    lowered = text.lower()
+    checks = [
+        (
+            "missing_agents_setup_section",
+            "AGENTS.md does not appear to document setup or installation instructions.",
+            ["setup", "install", "installation"],
+            "Document setup/install instructions in AGENTS.md.",
+        ),
+        (
+            "missing_agents_testing_section",
+            "AGENTS.md does not appear to document testing instructions.",
+            ["test", "pytest", "npm test", "go test", "cargo test"],
+            "Document the canonical test command in AGENTS.md.",
+        ),
+        (
+            "missing_agents_security_section",
+            "AGENTS.md does not appear to include security or secrets guidance.",
+            ["security", "secret", "credential", "api key"],
+            "Add security notes such as not committing secrets or credentials.",
+        ),
+    ]
+    for code, message, keywords, suggestion in checks:
+        if not any(keyword in lowered for keyword in keywords):
+            problems.append(Problem(level="info", code=code, file="AGENTS.md", message=message, suggestion=suggestion))
+            suggestions.append(suggestion)
+
+
 def _add_path_reference_problems(root: Path, problems: List[Problem]) -> None:
     seen: Set[Tuple[str, str]] = set()
     for relative in MARKDOWN_CONTEXT_PATHS:
@@ -468,6 +579,10 @@ def _score(files: Dict[str, bool], problems: List[Problem], commands: Dict[str, 
             score -= 5
         elif problem.code == "agentctx_marker_conflict":
             score -= 5
+        elif problem.code in {"invalid_make_target", "invalid_npm_script", "missing_python_project_file"}:
+            score -= 5
+        elif problem.code in {"missing_agents_setup_section", "missing_agents_testing_section", "missing_agents_security_section"}:
+            score -= 3
     return max(0, min(100, score))
 
 

@@ -50,3 +50,14 @@ def test_pack_tree_excludes_existing_project_context(tmp_path):
     text = (tmp_path / "PROJECT_CONTEXT.md").read_text(encoding="utf-8")
     structure = text.split("## Project Structure", 1)[1].split("## Detected Commands", 1)[0]
     assert "PROJECT_CONTEXT.md" not in structure
+
+
+def test_cli_pack_stdout_does_not_write_file(tmp_path, capsys):
+    from agentctx.cli import main
+
+    (tmp_path / "README.md").write_text("# Demo\n", encoding="utf-8")
+    code = main(["pack", "--root", str(tmp_path), "--stdout"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "# PROJECT_CONTEXT.md" in out
+    assert not (tmp_path / "PROJECT_CONTEXT.md").exists()
