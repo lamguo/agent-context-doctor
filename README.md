@@ -1,7 +1,29 @@
 # Agent Context Doctor
 
-[![CI](https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml)
-![agentctx: 100/100](https://img.shields.io/badge/agentctx-100%2F100-brightgreen)
+<p align="center">
+  <b>One CLI to keep all your AI agent context files in sync.</b><br>
+  <sub>Zero dependencies · Works offline · No API key needed</sub>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/agent-context-doctor/">
+    <img src="https://img.shields.io/pypi/v/agent-context-doctor?color=blue" alt="PyPI Version">
+  </a>
+  <a href="https://pypi.org/project/agent-context-doctor/">
+    <img src="https://img.shields.io/pypi/pyversions/agent-context-doctor" alt="Python Versions">
+  </a>
+  <a href="https://github.com/lamguo/agent-context-doctor/blob/master/LICENSE">
+    <img src="https://img.shields.io/pypi/l/agent-context-doctor?color=green" alt="License">
+  </a>
+  <a href="https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml">
+    <img src="https://github.com/lamguo/agent-context-doctor/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://github.com/lamguo/agent-context-doctor">
+    <img src="https://img.shields.io/github/stars/lamguo/agent-context-doctor?style=social" alt="GitHub Stars">
+  </a>
+  <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/agentctx-100%2F100-brightgreen" alt="agentctx score">
+</p>
 
 Audit, generate, sync, verify, and package repository context files for AI coding agents.
 
@@ -33,6 +55,17 @@ Keeping those files synchronized by hand is easy to forget. Agent Context Doctor
 - **Generate score badges** for README files.
 - **Run safe repairs** with `agentctx doctor --fix`.
 - **Zero runtime dependencies**; Python standard library only.
+
+| Command | What it does |
+|---|---|
+| `agentctx scan` | 🏥 Score your repo's AI context health (0–100) |
+| `agentctx verify` | ✅ CI-friendly pass/fail gate (`--min-score`, `--strict`) |
+| `agentctx init` | 📋 Generate AGENTS.md, HANDOFF.md & all tool context files |
+| `agentctx sync` | 🔄 Propagate AGENTS.md updates across CLAUDE.md, GEMINI.md, Copilot, Cursor |
+| `agentctx doctor --fix` | 🩺 Auto-repair all missing/outdated context in one command |
+| `agentctx handoff` | 📝 Session handoff summary from local Git state |
+| `agentctx pack` | 📦 Bundle everything into `PROJECT_CONTEXT.md` or `--stdout` |
+| `agentctx badge` | 🏅 Generate a score badge for your README |
 
 ## Installation
 
